@@ -1,0 +1,36 @@
+networks:
+  sandbox:
+    name: sandbox_network
+services:
+  intranet:
+    user: root
+    image: odoo:18.0
+    container_name: intranet
+    restart: always
+    depends_on:
+      - intranet-postgres
+    ports:
+      - "8069:8069"
+    volumes:
+      - ./data/odoo/odoo_lib:/var/lib/odoo
+      - ./data/odoo/addons:/mnt/extra-addons
+      - ./modules:/mnt/extra-addons
+      - ./odoo.conf:/etc/odoo/odoo.conf
+    env_file:
+      - ./.env
+    networks:
+      - sandbox
+
+  intranet-postgres:
+    user: root
+    image: postgres:17
+    container_name: intranet-postgres
+    restart: always
+    ports:
+      - 5432:5432
+    volumes:
+      - ./data/db:/var/lib/postgresql/data/pgdata
+    env_file:
+      - ./.env
+    networks:
+      - sandbox

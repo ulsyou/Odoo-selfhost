@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: intranet
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: intranet
+  template:
+    metadata:
+      labels:
+        app: intranet
+    spec:
+      containers:
+      - name: odoo
+        image: odoo:18.0
+        securityContext:
+          runAsUser: 0
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+        env:
+        - name: HOST
+          value: intranet-postgres-service
+        - name: USER
+          valueFrom:
+            secretKeyRef:
+              name: intranet-secrets
+              key: POSTGRES_USER
+        - name: PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: intranet-secrets
+              key: POSTGRES_PASSWORD
+        volumeMounts:
+        - name: odoo-lib
+          mountPath: /var/lib/odoo
+        - name: extra-addons
+          mountPath: /mnt/extra-addons
+        - name: modules
+          mountPath: /mnt/extra-addons
+        - name: odoo-config
+          mountPath: /etc/odoo/odoo.conf
+          subPath: odoo.conf
+        ports:
+        - containerPort: 8069
+      volumes:
+      - name: odoo-lib
+        persistentVolumeClaim:
+          claimName: odoo-lib-pvc
+      - name: extra-addons
+        persistentVolumeClaim:
+          claimName: extra-addons-pvc
+      - name: modules
+        persistentVolumeClaim:
+          claimName: modules-pvc
+      - name: odoo-config
+        configMap:
+          name: odoo-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: intranet-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: intranet
+  ports:
+    - protocol: TCP
+      port: 8069
+      targetPort: 8069
